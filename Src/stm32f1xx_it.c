@@ -41,6 +41,7 @@ extern int samples;
 extern char all_samples[5];
 extern  uint32_t holder;
 extern int sfirst_3_ones;
+extern uint32_t c_clock;
 #define HIGH_THRESH 10
 #define LOW_THRESH 0
 
@@ -207,7 +208,7 @@ void SysTick_Handler(void)
 void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
-
+	c_clock = 1 - c_clock;
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */

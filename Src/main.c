@@ -76,7 +76,7 @@ static uint32_t Tx_value = 0;
 static uint8_t Rx_clock_value ;
 static uint8_t Tx_clock_value ;
 static uint16_t t_data =0;
-static uint32_t c_clock=0;
+uint32_t c_clock=0;
 int ft_flag=1;
 static uint32_t prv_clock=0;
 int ft2_flag=1;
@@ -255,8 +255,13 @@ void phy_Rx()
 	static uint32_t masker =1;
 	static int replace_counter =0;
 	static int syncer = 1; 
-	static int countergood=0;
-	
+	static int countergood=1;
+	if (countergood)
+	{
+		HAL_TIM_Base_Start(&htim4); //turn on timer
+		HAL_TIM_Base_Start_IT(&htim4);
+		countergood=0;
+	}
 	if(samples < 5)
 	{
 		return;
@@ -268,9 +273,6 @@ void phy_Rx()
 	else if (sfirst_3_ones <3  && syncer) 
 	{
 		//	start the timer in order to count the timers so we know what time does the timers need to set the timers and check that we get 3 ones  	
-		HAL_TIM_Base_Start(&htim4); //turn on timer
-		HAL_TIM_Base_Start_IT(&htim4);
-	
 		if ((all_samples[0] == 'H'	&& all_samples[1] == 'H' && all_samples[2] == 'L' && all_samples[3] == 'L' && all_samples[4] == 'L') || (all_samples[0] == 'H'	&& all_samples[1] == 'H' && all_samples[2] == 'H' && all_samples[3] == 'L' && all_samples[4] == 'L'))
 		{
 				sfirst_3_ones++; 
@@ -342,7 +344,7 @@ void interface()
 		ft_flag=0;
 		prv_clock=0;
 	}
-	c_clock=HAL_GPIO_ReadPin(interface_clock_GPIO_Port, interface_clock_Pin);
+	//c_clock=HAL_GPIO_ReadPin(interface_clock_GPIO_Port, interface_clock_Pin);
 	dll_to_phy_tx_bus_valid=HAL_GPIO_ReadPin(dll_to_phy_tx_bus_valid_GPIO_Port, dll_to_phy_tx_bus_valid_Pin);
 	if(!c_clock&&prv_clock&&dll_to_phy_tx_bus_valid)
 	{
