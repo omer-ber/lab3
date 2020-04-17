@@ -37,11 +37,19 @@
 
 /* USER CODE BEGIN 0 */
 extern uint32_t clock;
+extern int samples;
+extern char all_samples[5];
+extern  uint32_t holder;
+extern int sfirst_3_ones;
+#define HIGH_THRESH 10
+#define LOW_THRESH 0
+
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim4;
 
 /******************************************************************************/
 /*            Cortex-M3 Processor Interruption and Exception Handlers         */ 
@@ -219,6 +227,34 @@ void TIM3_IRQHandler(void)
   /* USER CODE BEGIN TIM3_IRQn 1 */
 
   /* USER CODE END TIM3_IRQn 1 */
+}
+
+/**
+* @brief This function handles TIM4 global interrupt.
+*/
+void TIM4_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM4_IRQn 0 */
+	if( holder <LOW_THRESH )
+		{
+			all_samples[samples] = 'L';
+			samples ++;
+		}
+		else if (holder > HIGH_THRESH )
+		{
+			all_samples[samples] = 'H';
+			samples ++;			
+		}	
+		else if ((LOW_THRESH < holder)&& (holder < HIGH_THRESH))
+		{						
+			all_samples[samples] = 'I';
+			samples ++;			
+		}				
+  /* USER CODE END TIM4_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim4);
+  /* USER CODE BEGIN TIM4_IRQn 1 */
+
+  /* USER CODE END TIM4_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

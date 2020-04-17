@@ -54,6 +54,7 @@
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
@@ -89,9 +90,9 @@ static uint32_t tempi = 0;
 static uint32_t tempi2 = 0;
 
 static uint32_t clock = 0;
-static int samples =0;
-static char all_samples[5] = {0};
-static uint32_t holder =0;
+int samples =0;
+char all_samples[5] = {0};
+uint32_t holder =0;
 char its_for_1samp ;
 
 /* USER CODE END PV */
@@ -101,6 +102,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_TIM4_Init(void);
 static void MX_NVIC_Init(void);
 
 /* USER CODE BEGIN PFP */
@@ -129,24 +131,6 @@ void just_sample_it(uint32_t holder, char all_samples[5])
 			samples ++;			
 		}				
 }
-
-char just_sample_it_once (uint32_t holder)
-{
-			if( holder <LOW_THRESH )
-		{
-			its_for_1samp = 'L';
-		}
-		else if (holder > HIGH_THRESH )
-		{
-			its_for_1samp = 'H';		
-		}	
-		else if ((LOW_THRESH < holder)&& (holder < HIGH_THRESH))
-		{						
-			its_for_1samp = 'I';	
-		}	
-	return its_for_1samp;		
-}
-
 
 
 
@@ -270,7 +254,8 @@ void phy_Rx()
 	static int sfirst_3_ones =0;
 	static uint32_t masker =1;
 	static int replace_counter =0;
-	static int syncer = 0; 
+	static int syncer = 1; 
+	static int countergood=0;
 	
 	if(samples < 5)
 	{
@@ -280,9 +265,24 @@ void phy_Rx()
 	{
 		return;
 	}
-	else if (sfirst_3_ones <3  && syncer)
+	else if (sfirst_3_ones <3  && syncer) 
 	{
-		//	start the timer in order to count the timers so we know what we need to set the timers and check that we get 3 ones 	
+		//	start the timer in order to count the timers so we know what time does the timers need to set the timers and check that we get 3 ones  	
+		HAL_TIM_Base_Start(&htim4); //turn on timer
+		HAL_TIM_Base_Start_IT(&htim4);
+	
+		if ((all_samples[0] == 'H'	&& all_samples[1] == 'H' && all_samples[2] == 'L' && all_samples[3] == 'L' && all_samples[4] == 'L') || (all_samples[0] == 'H'	&& all_samples[1] == 'H' && all_samples[2] == 'H' && all_samples[3] == 'L' && all_samples[4] == 'L'))
+		{
+				sfirst_3_ones++; 
+		}
+		else 
+		{
+			return;
+		}
+	}
+	else if (sfirst_3_ones==3)
+	{
+		syncer=0;
 	}
 	else if ( (all_samples[0] == 'L'	&& all_samples[1] == 'L' && all_samples[2] == 'L' && all_samples[3] == 'H' && all_samples[4] == 'H') || (all_samples[0] == 'L'	&& all_samples[1] == 'L' && all_samples[2] == 'H' && all_samples[3] == 'H' && all_samples[4] == 'H'))
 	{
@@ -292,6 +292,8 @@ void phy_Rx()
 	else if ((all_samples[0] == 'H'	&& all_samples[1] == 'H' && all_samples[2] == 'L' && all_samples[3] == 'L' && all_samples[4] == 'L') || (all_samples[0] == 'H'	&& all_samples[1] == 'H' && all_samples[2] == 'H' && all_samples[3] == 'L' && all_samples[4] == 'L'))
 	{
 		// the bit is 1 add one to the bus uising masking
+		tempi2+=masker;
+		masker*=2;
 		samples =0;
 	}
 	else if(replace_counter)
@@ -313,9 +315,11 @@ void phy_Rx()
 	
 	if (masker >256)
 	{
-		//reset haflag hho
+		phy_to_dll_rx_bus=tempi2;
+		syncer=1;
 		interface_rx_flag=1;
 		masker=1;
+		sfirst_3_ones=0;
 	}
 }
 
@@ -414,6 +418,7 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
+  MX_TIM4_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
@@ -428,7 +433,7 @@ int main(void)
 		phy_layer();	
 		interface();
 
-  /* USER CODE END WHILE */;
+  /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
 
@@ -496,6 +501,9 @@ static void MX_NVIC_Init(void)
   /* TIM3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(TIM3_IRQn);
+  /* TIM4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM4_IRQn);
 }
 
 /* TIM2 init function */
@@ -558,6 +566,39 @@ static void MX_TIM3_Init(void)
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
+/* TIM4 init function */
+static void MX_TIM4_Init(void)
+{
+
+  TIM_ClockConfigTypeDef sClockSourceConfig;
+  TIM_MasterConfigTypeDef sMasterConfig;
+
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 3332;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = 1;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
