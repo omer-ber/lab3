@@ -42,9 +42,10 @@ extern char all_samples[5];
 extern  uint32_t holder;
 extern int sfirst_3_ones;
 extern uint32_t c_clock;
-#define HIGH_THRESH 10
-#define LOW_THRESH 0
+#define HIGH_THRESH 3200
+#define LOW_THRESH 1500
 extern ADC_HandleTypeDef hadc1;
+extern uint32_t before_clock;
 
 
 /* USER CODE END 0 */
@@ -224,6 +225,7 @@ void TIM2_IRQHandler(void)
 void TIM3_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM3_IRQn 0 */
+	before_clock = clock ;			
 	clock = 1-clock;
   /* USER CODE END TIM3_IRQn 0 */
   HAL_TIM_IRQHandler(&htim3);
@@ -238,6 +240,8 @@ void TIM3_IRQHandler(void)
 void TIM4_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM4_IRQn 0 */
+	if (samples == 5)
+		samples=0;
 	while(HAL_ADC_PollForConversion(&hadc1,5) != HAL_OK){}
 	holder = HAL_ADC_GetValue(&hadc1);	
 	if( holder <= LOW_THRESH )

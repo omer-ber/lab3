@@ -45,8 +45,8 @@
 #include <stdlib.h>
 #define GPIOA_IDR 0x40010808
 #define GPIOB_ODR 0x40010C0C
-#define HIGH_THRESH 0x100
-#define LOW_THRESH 0x50
+#define HIGH_THRESH 3200
+#define LOW_THRESH 1500
 
 
 /* USER CODE END Includes */
@@ -91,11 +91,13 @@ static uint16_t odr_temp=0;
 static uint32_t tempi = 0;
 static uint32_t tempi2 = 0;
 
-static uint32_t clock = 0;
+uint32_t clock = 0;
 int samples =0;
 char all_samples[5] = {0};
 uint32_t holder =0;
 char its_for_1samp ;
+uint32_t before_clock =0;
+
 
 /* USER CODE END PV */
 
@@ -170,9 +172,9 @@ void just_send_it(char state)
 
 void phy_Tx()
 {
+
 	static int first_idle=1;
 	static int first_3_ones = 0;
-	static uint32_t before_clock =0;
 	static uint16_t shifter =1; // for the masking in order to iso the bit
 	static uint8_t transfer = 0; // var to the masked bit // saves the prev clock value in order to check that we are in rising edge
 	static uint8_t temp=0;	// takes the data from the bus
@@ -246,7 +248,7 @@ void phy_Tx()
 		phy_tx_busy=0;
 		shifter =1; // reset the masker 
 	}			
-before_clock = clock ;		
+
 }
 
 
@@ -280,15 +282,21 @@ void phy_Rx()
 		{
 				sfirst_3_ones++; 
 		}
+		else if (((all_samples[0] == 'L'	&& all_samples[1] == 'H') || (all_samples[0] == 'H'	&& all_samples[1] == 'L') || (all_samples[0] == 'I'	&& all_samples[1] == 'H') || (all_samples[0] == 'I'	&& all_samples[1] == 'L')  )&& replace_counter == 0)
+		{
+			all_samples [0] = all_samples[1];
+			all_samples [1] = all_samples[2];
+			all_samples [2] = all_samples[3];
+			all_samples [3] = all_samples[4];
+			samples--;
+			replace_counter =1; 
+		}		
 		else 
 		{
 			return;
 		}
 	}
-	else if (sfirst_3_ones==3)
-	{
-		syncer=0;
-	}
+
 	else if ( (all_samples[0] == 'L'	&& all_samples[1] == 'L' && all_samples[2] == 'L' && all_samples[3] == 'H' && all_samples[4] == 'H') || (all_samples[0] == 'L'	&& all_samples[1] == 'L' && all_samples[2] == 'H' && all_samples[3] == 'H' && all_samples[4] == 'H'))
 	{
 		masker *=2;
@@ -306,7 +314,7 @@ void phy_Rx()
 		return;
 	}
 			
-	else if (((all_samples[0] == 'L'	&& all_samples[1] == 'H') || (all_samples[0] == 'H'	&& all_samples[1] == 'L') )&& replace_counter == 0)
+	else if (((all_samples[0] == 'L'	&& all_samples[1] == 'H') || (all_samples[0] == 'H'	&& all_samples[1] == 'L') || (all_samples[0] == 'I'	&& all_samples[1] == 'H') || (all_samples[0] == 'I'	&& all_samples[1] == 'L')  )&& replace_counter == 0)
 	{
 		all_samples [0] = all_samples[1];
 		all_samples [1] = all_samples[2];
@@ -430,6 +438,7 @@ int main(void)
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
+	clock =0;
 	HAL_ADC_Start(&hadc1);
   /* USER CODE END 2 */
 
