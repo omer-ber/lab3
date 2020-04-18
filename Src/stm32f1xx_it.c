@@ -44,6 +44,8 @@ extern int sfirst_3_ones;
 extern uint32_t c_clock;
 #define HIGH_THRESH 10
 #define LOW_THRESH 0
+extern ADC_HandleTypeDef hadc1;
+
 
 /* USER CODE END 0 */
 
@@ -208,7 +210,7 @@ void SysTick_Handler(void)
 void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
-	c_clock = 1 - c_clock;
+	HAL_GPIO_TogglePin(interface_clock_GPIO_Port, interface_clock_Pin); 
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
@@ -236,12 +238,14 @@ void TIM3_IRQHandler(void)
 void TIM4_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM4_IRQn 0 */
-	if( holder <LOW_THRESH )
+	while(HAL_ADC_PollForConversion(&hadc1,5) != HAL_OK){}
+	holder = HAL_ADC_GetValue(&hadc1);	
+	if( holder <= LOW_THRESH )
 		{
 			all_samples[samples] = 'L';
 			samples ++;
 		}
-		else if (holder > HIGH_THRESH )
+		else if (holder >= HIGH_THRESH )
 		{
 			all_samples[samples] = 'H';
 			samples ++;			
