@@ -179,7 +179,15 @@ void phy_Tx()
 	static uint8_t transfer = 0; // var to the masked bit // saves the prev clock value in order to check that we are in rising edge
 	static uint8_t temp=0;	// takes the data from the bus
 	static int finished_bit =1;
-	if(first_idle)
+	static int countergood=1;
+
+	if (countergood)
+	{
+		HAL_TIM_Base_Start(&htim4); //turn on timer
+		HAL_TIM_Base_Start_IT(&htim4);
+		countergood=0;
+	}
+	if(!interface_tx_flag&&first_idle)
 	{
 		just_send_it('I');
 		first_idle =0;
@@ -217,6 +225,7 @@ void phy_Tx()
 			if((!before_clock) && (clock))
 			{
 				just_send_it('H');
+				just_send_it('H');
 			}
 			else if((before_clock) && (!clock))
 			{
@@ -239,7 +248,7 @@ void phy_Tx()
 			}				
 		}
 	}
-	else if ( shifter > 256) // after the last bit
+	else if ( shifter > 128) // after the last bit
 	{
 		HAL_TIM_Base_Stop(&htim3);
 		HAL_TIM_Base_Stop_IT(&htim3);
@@ -260,13 +269,7 @@ void phy_Rx()
 	static uint32_t masker =1;
 	static int replace_counter =0;
 	static int syncer = 1; 
-	static int countergood=1;
-	if (countergood)
-	{
-		HAL_TIM_Base_Start(&htim4); //turn on timer
-		HAL_TIM_Base_Start_IT(&htim4);
-		countergood=0;
-	}
+	
 	if(samples < 5)
 	{
 		return;
@@ -446,6 +449,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+		before_clock = clock ;			
 		phy_layer();	
 		interface();
 
