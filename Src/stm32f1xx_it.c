@@ -239,7 +239,11 @@ void TIM3_IRQHandler(void)
 void TIM4_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM4_IRQn 0 */
-	if (samples == 5)
+
+  /* USER CODE END TIM4_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim4);
+  /* USER CODE BEGIN TIM4_IRQn 1 */
+  if(samples == 5)
 		samples=0;
 	while(HAL_ADC_PollForConversion(&hadc1,5) != HAL_OK){}
 	holder = HAL_ADC_GetValue(&hadc1);	
@@ -258,10 +262,6 @@ void TIM4_IRQHandler(void)
 			all_samples[samples] = 'I';
 			samples ++;			
 		}				
-  /* USER CODE END TIM4_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim4);
-  /* USER CODE BEGIN TIM4_IRQn 1 */
-
   /* USER CODE END TIM4_IRQn 1 */
 }
 

@@ -173,6 +173,10 @@ void just_send_it(char state)
 void phy_Tx()
 {
 
+	static int flagfix =0;
+	static int flagfix2 =0;
+	static int flagfix3 =0;
+
 	static int first_idle=1;
 	static int first_3_ones = 0;
 	static uint16_t shifter =1; // for the masking in order to iso the bit
@@ -203,14 +207,16 @@ void phy_Tx()
 		}
 	if((first_3_ones <3))
 	{
-		if((!before_clock) && (clock))
+		if((!before_clock) && (clock) && !flagfix)
 		{
 			just_send_it('H');
+			flagfix=1;
 		}
-		else if((before_clock) && (!clock))
+		else if((before_clock) && (!clock) && flagfix)
 		{
 			just_send_it('L');
 			first_3_ones++;
+			flagfix=0;
 		}
 	}
 	else if (first_3_ones>=3 && shifter<256 )
@@ -222,29 +228,33 @@ void phy_Tx()
 		}
 		if(transfer == shifter)
 		{
-			if((!before_clock) && (clock))
+			if((!before_clock) && (clock) && !flagfix2 )
 			{
 				just_send_it('H');
 				just_send_it('H');
+				flagfix2=1;
 			}
-			else if((before_clock) && (!clock))
+			else if((before_clock) && (!clock) && flagfix2)
 			{
 				just_send_it('L');
 				shifter*=2;
 				finished_bit=1;	
+				flagfix2=0;
 			}
 		}
 		else
 		{
-			if((!before_clock) && (clock))
+			if((!before_clock) && (clock) && !flagfix3)
 			{
 				just_send_it('L');
+				flagfix3=1;
 			}
-			else if((before_clock) && (!clock))
+			else if((before_clock) && (!clock) && flagfix3)
 			{
 				just_send_it('H');
 				shifter*=2;
 				finished_bit=1;
+				flagfix3=0;
 			}				
 		}
 	}
@@ -252,7 +262,7 @@ void phy_Tx()
 	{
 		HAL_TIM_Base_Stop(&htim3);
 		HAL_TIM_Base_Stop_IT(&htim3);
-		just_send_it('I'); // put idle on the line
+		//just_send_it('I'); // put idle on the line
 		HAL_GPIO_WritePin(phy_tx_busy_GPIO_Port, phy_tx_busy_Pin, GPIO_PIN_RESET); //set phy busy to 0
 		phy_tx_busy=0;
 		shifter =1; // reset the masker 
@@ -274,7 +284,7 @@ void phy_Rx()
 	{
 		return;
 	}
-	else if (all_samples [1] == 'I' && all_samples[2] == 'I' )
+	if (all_samples [1] == 'I' && all_samples[2] == 'I' )
 	{
 		return;
 	}
@@ -329,7 +339,7 @@ void phy_Rx()
 	else
 		return;	
 	
-	if (masker >256)
+	if (masker >128)
 	{
 		phy_to_dll_rx_bus=tempi2;
 		tempi2=0;
