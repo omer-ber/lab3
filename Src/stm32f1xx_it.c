@@ -39,13 +39,18 @@
 extern uint32_t clock;
 extern int samples;
 extern char all_samples[5];
-extern  uint32_t holder;
+static uint32_t holder = 0;
 extern int sfirst_3_ones;
-extern uint32_t c_clock;
 #define HIGH_THRESH 3200
 #define LOW_THRESH 1500
 extern ADC_HandleTypeDef hadc1;
 extern uint32_t before_clock;
+static int sample1=0;
+static int sample2=0;
+static int sample3=0;
+static int sample4=0;
+static int sample5=0;
+
 
 
 /* USER CODE END 0 */
@@ -212,6 +217,7 @@ void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
 	HAL_GPIO_TogglePin(interface_clock_GPIO_Port, interface_clock_Pin); 
+
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
@@ -226,6 +232,7 @@ void TIM3_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM3_IRQn 0 */
 	clock = 1-clock;
+
   /* USER CODE END TIM3_IRQn 0 */
   HAL_TIM_IRQHandler(&htim3);
   /* USER CODE BEGIN TIM3_IRQn 1 */
@@ -251,6 +258,7 @@ void TIM4_IRQHandler(void)
 		{
 			all_samples[samples] = 'L';
 			samples ++;
+			
 		}
 		else if (holder >= HIGH_THRESH )
 		{
@@ -261,7 +269,27 @@ void TIM4_IRQHandler(void)
 		{						
 			all_samples[samples] = 'I';
 			samples ++;			
-		}				
+		}
+		if (samples ==1)
+		{
+			sample1=all_samples[samples-1];
+		}
+		if (samples ==2)
+		{
+			sample2=all_samples[samples-1];
+		}
+		if (samples ==3)
+		{
+			sample3=all_samples[samples-1];
+		}	
+		if (samples ==4)
+		{
+			sample4=all_samples[samples-1];
+		}
+		if (samples ==5)
+		{
+			sample5=all_samples[samples-1];
+		}			
   /* USER CODE END TIM4_IRQn 1 */
 }
 

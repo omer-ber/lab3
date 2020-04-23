@@ -78,7 +78,7 @@ static uint32_t Tx_value = 0;
 static uint8_t Rx_clock_value ;
 static uint8_t Tx_clock_value ;
 static uint16_t t_data =0;
-uint32_t c_clock=0;
+static uint32_t c_clock=0;
 int ft_flag=1;
 static uint32_t prv_clock=0;
 int ft2_flag=1;
@@ -94,10 +94,9 @@ static uint32_t tempi2 = 0;
 uint32_t clock = 0;
 int samples =0;
 char all_samples[5] = {0};
-uint32_t holder =0;
 char its_for_1samp ;
 uint32_t before_clock =0;
-
+                                                                                                                      
 
 /* USER CODE END PV */
 
@@ -172,11 +171,9 @@ void just_send_it(char state)
 
 void phy_Tx()
 {
-
 	static int flagfix =0;
 	static int flagfix2 =0;
 	static int flagfix3 =0;
-
 	static int first_idle=1;
 	static int first_3_ones = 0;
 	static uint16_t shifter =1; // for the masking in order to iso the bit
@@ -369,8 +366,7 @@ void interface()
 		ft_flag=0;
 		prv_clock=0;
 	}
-	c_clock=HAL_GPIO_ReadPin(interface_clock_GPIO_Port, interface_clock_Pin);
-	dll_to_phy_tx_bus_valid=HAL_GPIO_ReadPin(dll_to_phy_tx_bus_valid_GPIO_Port, dll_to_phy_tx_bus_valid_Pin);
+	//dll_to_phy_tx_bus_valid=HAL_GPIO_ReadPin(dll_to_phy_tx_bus_valid_GPIO_Port, dll_to_phy_tx_bus_valid_Pin);
 	if(!c_clock&&prv_clock&&dll_to_phy_tx_bus_valid)
 	{
 		dll_to_phy_tx_bus=(*GPIOA_IDR_Pointer & 255);
@@ -398,7 +394,6 @@ void interface()
 				interface_rx_flag=0;
 			}
 		}
-	prv_clock=c_clock;
 	
 }
 
@@ -406,9 +401,17 @@ void phy_layer()
 {
 	phy_Tx();
 	phy_Rx();
-	
+	                                                                                                               
 }
-
+void sampleClocks()
+{
+    before_clock = clock;
+		prv_clock=c_clock;
+		//phy_rx_clock = HAL_GPIO_ReadPin(phy_rx_clock_GPIO_Port,phy_rx_clock_Pin);
+    c_clock = HAL_GPIO_ReadPin(interface_clock_GPIO_Port,interface_clock_Pin);
+    dll_to_phy_tx_bus_valid = HAL_GPIO_ReadPin(dll_to_phy_tx_bus_valid_GPIO_Port, dll_to_phy_tx_bus_valid_Pin);
+    phy_to_dll_rx_bus_valid = HAL_GPIO_ReadPin(phy_to_dll_rx_bus_valid_GPIO_Port, phy_to_dll_rx_bus_valid_Pin);
+}
 
 
 /* USER CODE END 0 */
@@ -459,7 +462,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		before_clock = clock ;			
+		sampleClocks();
 		phy_layer();	
 		interface();
 
