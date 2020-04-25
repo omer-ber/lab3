@@ -50,7 +50,8 @@ static int sample2=0;
 static int sample3=0;
 static int sample4=0;
 static int sample5=0;
-
+int counter_h=0;
+extern uint32_t bit_mover;
 
 
 /* USER CODE END 0 */
@@ -249,47 +250,87 @@ void TIM4_IRQHandler(void)
 
   /* USER CODE END TIM4_IRQn 0 */
   HAL_TIM_IRQHandler(&htim4);
-  /* USER CODE BEGIN TIM4_IRQn 1 */
-  if(samples == 5)
-		samples=0;
-	while(HAL_ADC_PollForConversion(&hadc1,5) != HAL_OK){}
-	holder = HAL_ADC_GetValue(&hadc1);	
-	if( holder <= LOW_THRESH )
-		{
-			all_samples[samples] = 'L';
-			samples ++;
+ 	/* USER CODE BEGIN TIM4_IRQn 1 */
+
+	if(samples!=5)
+	{
+		while(HAL_ADC_PollForConversion(&hadc1,5) != HAL_OK){}
+		holder = HAL_ADC_GetValue(&hadc1);	
+		if( holder <= LOW_THRESH )
+			{
+				all_samples[samples] = 'L';
+				samples ++;
 			
+			}
+			else if (holder >= HIGH_THRESH )
+			{
+				all_samples[samples] = 'H';
+				samples ++;			
+			}	
+			else if ((LOW_THRESH < holder)&& (holder < HIGH_THRESH))
+			{						
+				all_samples[samples] = 'I';
+				samples ++;			
+			}
+			if (samples ==1)
+			{
+				sample1=all_samples[samples-1];
+			}
+			if (samples ==2)
+			{
+				sample2=all_samples[samples-1];
+			}
+			if (samples ==3)
+			{
+				sample3=all_samples[samples-1];
+			}	
+			if (samples ==4)
+			{
+				sample4=all_samples[samples-1];
+			}
+			if (samples ==5)
+			{
+				sample5=all_samples[samples-1];
+			}	
 		}
-		else if (holder >= HIGH_THRESH )
+	else
+	{
+		if ( (all_samples[0] == 'L'	&& all_samples[1] == 'L' && all_samples[2] == 'L' && all_samples[3] == 'H' && all_samples[4] == 'H') || (all_samples[0] == 'L'	&& all_samples[1] == 'L' && all_samples[2] == 'H' && all_samples[3] == 'H' && all_samples[4] == 'H'))
 		{
-			all_samples[samples] = 'H';
-			samples ++;			
-		}	
-		else if ((LOW_THRESH < holder)&& (holder < HIGH_THRESH))
-		{						
-			all_samples[samples] = 'I';
-			samples ++;			
+			bit_mover =0;
 		}
-		if (samples ==1)
+		else if ((all_samples[0] == 'H'	&& all_samples[1] == 'H' && all_samples[2] == 'L' && all_samples[3] == 'L' && all_samples[4] == 'L') || (all_samples[0] == 'H'	&& all_samples[1] == 'H' && all_samples[2] == 'H' && all_samples[3] == 'L' && all_samples[4] == 'L'))
 		{
-			sample1=all_samples[samples-1];
+			bit_mover =1;
 		}
-		if (samples ==2)
+		else if ((all_samples[0] == 'I'	&& all_samples[1] == 'I' && all_samples[2] == 'I' && all_samples[3] == 'I' && all_samples[4] == 'I'))
 		{
-			sample2=all_samples[samples-1];
+			bit_mover =2;
 		}
-		if (samples ==3)
+		else
 		{
-			sample3=all_samples[samples-1];
-		}	
-		if (samples ==4)
-		{
-			sample4=all_samples[samples-1];
+		all_samples [0] = all_samples[1];
+		all_samples [1] = all_samples[2];
+		all_samples [2] = all_samples[3];
+		all_samples [3] = all_samples[4];
+		samples--;
 		}
-		if (samples ==5)
-		{
-			sample5=all_samples[samples-1];
-		}			
+		
+		
+	}
+			
+
+
+
+
+
+
+
+
+
+
+
+		
   /* USER CODE END TIM4_IRQn 1 */
 }
 

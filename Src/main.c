@@ -90,12 +90,15 @@ static uint32_t *GPIOB_ODR_Pointer = (uint32_t*)GPIOB_ODR;
 static uint16_t odr_temp=0;
 static uint32_t tempi = 0;
 static uint32_t tempi2 = 0;
-
+static uint32_t  biti=0;
 uint32_t clock = 0;
 int samples =0;
 char all_samples[5] = {0};
 char its_for_1samp ;
 uint32_t before_clock =0;
+static int phy_counter=0;
+uint32_t bit_mover =0;
+
                                                                                                                       
 
 /* USER CODE END PV */
@@ -164,9 +167,82 @@ void just_send_it(char state)
 	
 }
 
+void phy_Tx()
+{
+	static uint16_t shifter =1; // for the masking in order to iso the bit
+	static uint8_t transfer = 0; // var to the masked bit // saves the prev clock value in order to check that we are in rising edge
+	static int first_idle=1;
+	static int countergood=1;
+	static int flagfix =0;
+	static int flagfix2 =0;
+	static int flagfix3 =0;
+	
+
+	if (countergood)
+	{
+		HAL_TIM_Base_Start(&htim4); //turn on timer
+		HAL_TIM_Base_Start_IT(&htim4);
+		countergood=0;
+	}
+	if(!interface_tx_flag&&first_idle)
+	{
+		just_send_it('I');
+		first_idle =0;
+	}
+	
+	if(interface_tx_flag)
+	{  														// checkes if we are in a new byte
+		HAL_GPIO_WritePin(phy_tx_busy_GPIO_Port, phy_tx_busy_Pin, GPIO_PIN_SET); //set phy busy to 1
+		phy_tx_busy=1;
+		HAL_TIM_Base_Start(&htim3); //turn on timer
+		HAL_TIM_Base_Start_IT(&htim3);
+		interface_tx_flag=0;
+	}	
+	transfer = ((dll_to_phy_tx_bus) &	(shifter));
+	if((!before_clock) && clock && !flagfix)
+	{
+		if (transfer == shifter)
+		{
+			just_send_it('H');
+			flagfix=1;	
+		}
+		else
+		{
+			just_send_it('L');
+			flagfix=1;
+		}
+	}
+	else if(before_clock && !clock && flagfix )
+	{
+		if (transfer == shifter)
+		{
+			just_send_it('L');
+			shifter*=2;
+			flagfix=0;
+		}
+		else
+		{
+			just_send_it('H');
+			shifter*=2;
+			flagfix=0;
+		}		
+	}
 
 
 
+	if ( shifter > 128) // after the last bit
+	{
+		HAL_TIM_Base_Stop(&htim3);
+		HAL_TIM_Base_Stop_IT(&htim3);
+		just_send_it('I'); // put idle on the line
+		HAL_GPIO_WritePin(phy_tx_busy_GPIO_Port, phy_tx_busy_Pin, GPIO_PIN_RESET); //set phy busy to 0
+		phy_tx_busy=0;
+		shifter =1; // reset the masker 
+	}				
+	
+}
+
+/*
 
 
 void phy_Tx()
@@ -266,18 +342,14 @@ void phy_Tx()
 	}			
 
 }
-
-
+*/
+/*
 void phy_Rx()
 {
 	static uint32_t tempi = 0;
 	static uint32_t tempi2 = 0;
-	static int sfirst_3_ones =0;
 	static uint32_t masker =1;
-	static int replace_counter =0;
-	static int syncer = 1; 
-	
-	if(samples < 5)
+	if(samples < 4)
 	{
 		return;
 	}
@@ -285,29 +357,7 @@ void phy_Rx()
 	{
 		return;
 	}
-	else if (sfirst_3_ones <3  && syncer) 
-	{
-		//	start the timer in order to count the timers so we know what time does the timers need to set the timers and check that we get 3 ones  	
-		if ((all_samples[0] == 'H'	&& all_samples[1] == 'H' && all_samples[2] == 'L' && all_samples[3] == 'L' && all_samples[4] == 'L') || (all_samples[0] == 'H'	&& all_samples[1] == 'H' && all_samples[2] == 'H' && all_samples[3] == 'L' && all_samples[4] == 'L'))
-		{
-				sfirst_3_ones++; 
-		}
-		else if (((all_samples[0] == 'L'	&& all_samples[1] == 'H') || (all_samples[0] == 'H'	&& all_samples[1] == 'L') || (all_samples[0] == 'I'	&& all_samples[1] == 'H') || (all_samples[0] == 'I'	&& all_samples[1] == 'L')  )&& replace_counter == 0)
-		{
-			all_samples [0] = all_samples[1];
-			all_samples [1] = all_samples[2];
-			all_samples [2] = all_samples[3];
-			all_samples [3] = all_samples[4];
-			samples--;
-			replace_counter =1; 
-		}		
-		else 
-		{
-			return;
-		}
-	}
-
-	else if ( (all_samples[0] == 'L'	&& all_samples[1] == 'L' && all_samples[2] == 'L' && all_samples[3] == 'H' && all_samples[4] == 'H') || (all_samples[0] == 'L'	&& all_samples[1] == 'L' && all_samples[2] == 'H' && all_samples[3] == 'H' && all_samples[4] == 'H'))
+	if ( (all_samples[0] == 'L'	&& all_samples[1] == 'L' && all_samples[2] == 'L' && all_samples[3] == 'H' && all_samples[4] == 'H') || (all_samples[0] == 'L'	&& all_samples[1] == 'L' && all_samples[2] == 'H' && all_samples[3] == 'H' && all_samples[4] == 'H'))
 	{
 		masker *=2;
 		samples =0;
@@ -318,21 +368,50 @@ void phy_Rx()
 		tempi2+=masker;
 		masker*=2;
 		samples =0;
-	}
-	else if(replace_counter)
+	}	
+	
+	if (masker >128)
+	{
+		phy_to_dll_rx_bus=tempi2;
+		tempi2=0;
+		interface_rx_flag=1;
+		masker=1;
+	}	
+	
+	
+}
+
+
+*/
+void phy_Rx()
+{
+	static uint32_t tempi = 0;
+	static uint32_t tempi2 = 0;
+	static int sfirst_3_ones =0;
+	static uint32_t masker =1;
+	static int replace_counter =0;
+	static int syncer = 1; \
+	phy_counter++;
+	if(samples < 5)
 	{
 		return;
 	}
-			
-	else if (((all_samples[0] == 'L'	&& all_samples[1] == 'H') || (all_samples[0] == 'H'	&& all_samples[1] == 'L') || (all_samples[0] == 'I'	&& all_samples[1] == 'H') || (all_samples[0] == 'I'	&& all_samples[1] == 'L')  )&& replace_counter == 0)
+	else if (!bit_mover)
 	{
-		all_samples [0] = all_samples[1];
-		all_samples [1] = all_samples[2];
-		all_samples [2] = all_samples[3];
-		all_samples [3] = all_samples[4];
-		samples--;
-		replace_counter =1; 
+		masker *=2;
+		samples =0;
+		biti=0;
 	}
+	else if (bit_mover==1)
+	{
+		// the bit is 1 add one to the bus uising masking
+		tempi2+=masker;
+		masker*=2;
+		samples =0;
+		biti =2;
+	}
+
+
 	else
 		return;	
 	
@@ -340,13 +419,11 @@ void phy_Rx()
 	{
 		phy_to_dll_rx_bus=tempi2;
 		tempi2=0;
-		syncer=1;
 		interface_rx_flag=1;
 		masker=1;
 		sfirst_3_ones=0;
 	}
 }
-
 
 
 
@@ -371,6 +448,7 @@ void interface()
 	{
 		dll_to_phy_tx_bus=(*GPIOA_IDR_Pointer & 255);
 		interface_tx_flag=1;
+		samples =0;
 	}
 	else if ((c_clock)&&(!prv_clock))
 		{

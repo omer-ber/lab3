@@ -260,6 +260,16 @@
           <WinNumber>1</WinNumber>
           <ItemText>c_clock</ItemText>
         </Ww>
+        <Ww>
+          <count>22</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>phy_counter</ItemText>
+        </Ww>
+        <Ww>
+          <count>23</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>counter_h</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>
