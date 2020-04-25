@@ -171,6 +171,58 @@ void phy_Tx()
 {
 	static uint16_t shifter =1; // for the masking in order to iso the bit
 	static uint8_t transfer = 0; // var to the masked bit // saves the prev clock value in order to check that we are in rising edge
+	static uint8_t temp=0;	// takes the data from the bus
+	Tx_clock_value = HAL_GPIO_ReadPin(phy_tx_clock_GPIO_Port, phy_tx_clock_Pin); // reads the current value of the clcok
+	if(interface_tx_flag){  // checkes if we are in a new byte
+		HAL_GPIO_WritePin(phy_tx_busy_GPIO_Port, phy_tx_busy_Pin, GPIO_PIN_SET); //set phy busy to 1
+		HAL_TIM_Base_Start(&htim3); //turn on timer
+		HAL_TIM_Base_Start_IT(&htim3);
+		interface_tx_flag=0;
+	}
+	else if (Tx_clock_value && (!p_clock_val) && shifter <= 256) // checks if we are in a rising edge 
+	{
+			transfer = ((dll_to_phy_tx_bus) &	(shifter));
+			if (transfer == shifter)
+			{
+				just_send_it('H');
+			}	
+			else
+			{
+				just_send_it('L');
+			}
+	}
+	else if (!Tx_clock_value && (p_clock_val) && shifter <= 256) // checks if we are in a rising edge 
+	{
+			transfer = ((dll_to_phy_tx_bus) &	(shifter));
+			if (transfer == shifter)
+			{
+				just_send_it('L');
+			}	
+			else
+			{
+				just_send_it('H');
+			}
+			shifter = shifter*2;		
+	}
+		
+	else if ( shifter > 256) // after the last bit
+	{
+		HAL_TIM_Base_Stop(&htim3);
+		HAL_TIM_Base_Stop_IT(&htim3);
+		HAL_GPIO_WritePin(phy_tx_clock_GPIO_Port, phy_tx_clock_Pin ,GPIO_PIN_RESET); //set clock to zero
+		HAL_GPIO_WritePin(phy_tx_busy_GPIO_Port, phy_tx_busy_Pin, GPIO_PIN_RESET); //set phy busy to 1
+		shifter =1; // reset the masker 
+	}
+	p_clock_val = Tx_clock_value; // current clock into previos clock
+}
+
+
+ 
+/*
+void phy_Tx()
+{
+	static uint16_t shifter =1; // for the masking in order to iso the bit
+	static uint8_t transfer = 0; // var to the masked bit // saves the prev clock value in order to check that we are in rising edge
 	static int first_idle=1;
 	static int countergood=1;
 	static int flagfix =0;
@@ -212,7 +264,7 @@ void phy_Tx()
 			flagfix=1;
 		}
 	}
-	else if(before_clock && !clock && flagfix )
+	if(before_clock && !clock && flagfix )
 	{
 		if (transfer == shifter)
 		{
@@ -239,8 +291,12 @@ void phy_Tx()
 		phy_tx_busy=0;
 		shifter =1; // reset the masker 
 	}				
-	
-}
+	*/
+
+
+
+
+
 
 /*
 
@@ -781,6 +837,9 @@ static void MX_GPIO_Init(void)
                           |dll_rx_6_Pin|dll_rx_7_Pin|interface_clock_Pin|phy_alive_Pin 
                           |phy_tx_busy_Pin|phy_to_dll_rx_bus_valid_Pin|dll_rx_0_Pin|dll_rx_1_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(phy_tx_togle_GPIO_Port, phy_tx_togle_Pin, GPIO_PIN_RESET);
+
   /*Configure GPIO pins : B_Pin C_Pin */
   GPIO_InitStruct.Pin = B_Pin|C_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -806,6 +865,19 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : phy_tx_togle_Pin */
+  GPIO_InitStruct.Pin = phy_tx_togle_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(phy_tx_togle_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : phy_tx_clock_Pin */
+  GPIO_InitStruct.Pin = phy_tx_clock_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(phy_tx_clock_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : dll_to_phy_tx_bus_valid_Pin */
   GPIO_InitStruct.Pin = dll_to_phy_tx_bus_valid_Pin;

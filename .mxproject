@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=C:/Users/yoavi/Desktop/lab3/lab3ro/lab3/Inc
+HeaderPath=C:/Users/yoavi/Desktop/lab3/lab3/Inc
 HeaderFiles=stm32f1xx_it.h;stm32f1xx_hal_conf.h;main.h;
-SourcePath=C:/Users/yoavi/Desktop/lab3/lab3ro/lab3/Src
+SourcePath=C:/Users/yoavi/Desktop/lab3/lab3/Src
 SourceFiles=stm32f1xx_it.c;stm32f1xx_hal_msp.c;main.c;
 
 [PreviousLibFiles]
